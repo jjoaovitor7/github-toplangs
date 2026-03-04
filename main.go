@@ -64,7 +64,7 @@ var langColors = map[string]string{
   "Python":     "#3572A5",
 }
 
-const PORT = ":8000"
+const PORT = os.Getenv("PORT")
 
 func fetchRepos(username, token string) ([]Repo, error) {
   url := fmt.Sprintf("https://api.github.com/users/%s/repos?per_page=100", username)
@@ -168,15 +168,8 @@ func renderSVG(w http.ResponseWriter, langs []LangView) {
     maxRows = colRight
   }
 
-  colX := []int{
-    colLeftX,
-    colRightX + 64
-  }
-
-  percentX := []int{
-    colLeftX + colWidth,
-    colRightX + colWidth + 64
-  }
+  colX := []int{colLeftX, colRightX + 64}
+  percentX := []int{colLeftX + colWidth, colRightX + colWidth + 64}
 
   for i := range langs {
     l := &langs[i]
@@ -291,6 +284,11 @@ func main() {
   mux := http.NewServeMux()
   mux.HandleFunc("/toplangs", handler)
   logging := loggingMiddleware(mux)
+
+  if PORT == "" {
+    PORT = ":8080"
+  }
+
   log.Printf("Server started at %s", PORT)
   http.ListenAndServe(PORT, logging)
 }
