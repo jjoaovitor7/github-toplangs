@@ -64,7 +64,7 @@ var langColors = map[string]string{
   "Python":     "#3572A5",
 }
 
-const PORT = os.Getenv("PORT")
+var PORT = os.Getenv("PORT")
 
 func fetchRepos(username, token string) ([]Repo, error) {
   url := fmt.Sprintf("https://api.github.com/users/%s/repos?per_page=100", username)
