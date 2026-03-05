@@ -245,6 +245,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
   })
 
   w.Header().Set("Content-Type", "image/svg+xml")
+  w.Header().Set("Cache-Control", "public, max-age=43200, must-revalidate")
   renderSVG(w, list)
 }
 
@@ -290,6 +291,8 @@ func main() {
   }
 
   log.Printf("Server started at %s", PORT)
-  http.ListenAndServe(PORT, logging)
+  if err := http.ListenAndServe(PORT, logging); err != nil {
+    log.Fatal(err)
+  }
 }
 
