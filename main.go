@@ -41,8 +41,12 @@ type responseWriter struct {
   status int
 }
 
-var svgTemplate = template.Must(
+var topLangsTemplate = template.Must(
   template.ParseFiles("templates/toplangs.tmpl"),
+)
+
+var indexTemplate = template.Must(
+  template.ParseFiles("templates/index.tmpl"),
 )
 
 // https://raw.githubusercontent.com/github/linguist/master/lib/linguist/languages.yml
@@ -200,10 +204,10 @@ func renderSVG(w http.ResponseWriter, langs []LangView) {
     Height: colStartY + colStepY*maxRows + 16,
     Langs: langs,
   }
-  svgTemplate.Execute(w, data)
+  topLangsTemplate.Execute(w, data)
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func topLangsRouteHandler(w http.ResponseWriter, r *http.Request) {
   token := os.Getenv("GITHUB_TOKEN")
 
   user := r.URL.Query().Get("user")
@@ -249,6 +253,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
   renderSVG(w, list)
 }
 
+func indexRouteHandler(w http.ResponseWriter, r *http.Request) {
+	indexTemplate.Execute(w, nil)
+}
+
 func apacheLog(r *http.Request, status int) {
   ip := r.RemoteAddr
   if strings.Contains(ip, ":") {
@@ -283,7 +291,8 @@ func (rw *responseWriter) WriteHeader(code int) {
 
 func main() {
   mux := http.NewServeMux()
-  mux.HandleFunc("/toplangs", handler)
+  mux.HandleFunc("/", indexRouteHandler)
+  mux.HandleFunc("/toplangs", topLangsRouteHandler)
   logging := loggingMiddleware(mux)
 
   if PORT == "" {
