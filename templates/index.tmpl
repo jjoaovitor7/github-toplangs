@@ -52,6 +52,16 @@
         transform: scale(1.32);
       }
 
+      .form-control::placeholder {
+        color: var(--bs-secondary);
+      }
+      .form-control:-moz-placeholder {
+        color: var(--bs-secondary);
+      }
+      .form-control::-webkit-input-placeholder {
+        color: var(--bs-secondary);
+      }
+
       #preview {
         max-height: 256px;
         transition: opacity 0.8s ease-in-out;
@@ -88,10 +98,9 @@
         <label for="limit" class="form-label text-light">
           Limit
         </label>
-        <input
-          id="limit"
+        <input id="limit"
           class="form-control bg-dark text-light border-secondary"
-          placeholder="4"
+          placeholder="8"
         />
       </div>
 
@@ -99,10 +108,9 @@
         <label for="hide" class="form-label text-light">
           Hide (comma separated)
         </label>
-        <input
-          id="hide"
+        <input id="hide"
           class="form-control bg-dark text-light border-secondary"
-          placeholder="html,css"
+          placeholder="mdx,ejs,python"
         />
       </div>
 
@@ -160,10 +168,10 @@
         if (inputs[2].value) {
           url += "&hide=" + encodeURIComponent(inputs[2].value);
         }
+
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.src = url + "&t=" + Date.now();
-
         img.onload = function(e) {
           previewImg.src = img.src;
           previewImg.classList.add("visible");
@@ -171,7 +179,7 @@
           generateBtn.textContent = originalText;
         }
 
-        md.value = `![Top Languages](${url})`;
+        md.value = `![GitHub Top Langs](${url})`;
       });
     </script>
   </body>
