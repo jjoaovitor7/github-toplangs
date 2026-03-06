@@ -1,24 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" encoding="UTF-8"
+<!-- <?xml version="1.0" encoding="UTF-8"?> -->
+<svg xmlns="http://www.w3.org/2000/svg"
   width="{{.Width}}"
   height="{{.Height}}"
   viewBox="0 0 {{.Width}} {{.Height}}"
   fill="none">
-  <defs>
-    <linearGradient id="shimmer">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
-      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.25"/>
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-    </linearGradient>
 
-    <animateTransform
-      href="#shimmer"
-      attributeName="gradientTransform"
-      type="translate"
-      from="-{{.Width}} 0"
-      to="{{.Width}} 0"
-      dur="2s"
-      repeatCount="indefinite"
-    />
+  <defs xmlns="http://www.w3.org/2000/svg">
+    <linearGradient xmlns="http://www.w3.org/2000/svg" id="shimmer" gradientUnits="userSpaceOnUse" x1="-200" y1="0" x2="200" y2="0">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+
+      <animateTransform
+        attributeName="gradientTransform"
+        type="translate"
+        repeatCount="indefinite"
+        values="-400 0; 400 0"
+        dur="4s"
+      />
+    </linearGradient>
   </defs>
 
   <style>

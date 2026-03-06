@@ -156,7 +156,7 @@ func renderSVG(w http.ResponseWriter, langs []LangView) {
     colStepY  = 42
   )
 
-  w.Header().Set("Content-Type", "image/svg+xml")
+  w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
   w.WriteHeader(http.StatusOK)
 
   sum := 0
