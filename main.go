@@ -11,6 +11,7 @@ import (
   "strings"
   "strconv"
   "os"
+  "bytes"
 )
 
 type Repo struct {
@@ -69,6 +70,8 @@ var langColors = map[string]string{
 }
 
 var PORT = os.Getenv("PORT")
+
+var cache = map[string][]byte{}
 
 func fetchRepos(username, token string) ([]Repo, error) {
   url := fmt.Sprintf("https://api.github.com/users/%s/repos?per_page=100", username)
@@ -147,17 +150,14 @@ func topLangsHandler(username string, token string, limit int, hide map[string]b
   return sum, nil
 }
 
-func renderSVG(w http.ResponseWriter, langs []LangView) {
+func generateSVG(langs []LangView, query string) []byte {
   const (
     colWidth  = 128
-    colLeftX  = 16
+    colLeftX  = 32
     colRightX = 128
     colStartY = 99
     colStepY  = 42
   )
-
-  w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
-  w.WriteHeader(http.StatusOK)
 
   sum := 0
   for _, l := range langs {
@@ -204,7 +204,12 @@ func renderSVG(w http.ResponseWriter, langs []LangView) {
     Height: colStartY + colStepY*maxRows + 16,
     Langs: langs,
   }
-  topLangsTemplate.Execute(w, data)
+
+  var svgBuffer bytes.Buffer
+  topLangsTemplate.Execute(&svgBuffer, data)
+  svg := svgBuffer.Bytes()
+  cache[query] = svg
+  return svg
 }
 
 func topLangsRouteHandler(w http.ResponseWriter, r *http.Request) {
@@ -230,6 +235,13 @@ func topLangsRouteHandler(w http.ResponseWriter, r *http.Request) {
     }
   }
 
+  query := r.URL.RawQuery
+  if svg, ok := cache[query]; ok {
+    w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
+    w.Write(svg)
+    return
+  }
+
   data, _ := topLangsHandler(user,
     token,
     limit,
@@ -248,13 +260,18 @@ func topLangsRouteHandler(w http.ResponseWriter, r *http.Request) {
     return list[i].Bytes > list[j].Bytes
   })
 
-  w.Header().Set("Content-Type", "image/svg+xml")
+  svg := generateSVG(list, query)
+
   w.Header().Set("Cache-Control", "public, max-age=43200, must-revalidate")
-  renderSVG(w, list)
+  w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
+  w.Header().Set("Content-Length", strconv.Itoa(len(svg)))
+
+  w.WriteHeader(http.StatusOK)
+  w.Write(svg)
 }
 
 func indexRouteHandler(w http.ResponseWriter, r *http.Request) {
-	indexTemplate.Execute(w, nil)
+  indexTemplate.Execute(w, nil)
 }
 
 func apacheLog(r *http.Request, status int) {
