@@ -45,49 +45,50 @@
     y="0"
     width="100%"
     height="100%"
-    rx="16"
-    fill="#0d1117"
-    stroke="#30363d"
+    rx="32"
+    fill="#111111"
   />
 
-  <text x="16" y="64" class="title">
+  <text x="32" y="64" class="title">
     Most Used Languages
   </text>
 
   {{range .Langs}}
-    <text x="{{.ColX}}" y="{{.NameY}}" class="lang">
-      {{.Name}}
-    </text>
+    <g>
+      <text x="{{.ColX}}" y="{{.NameY}}" class="lang">
+        {{.Name}}
+      </text>
 
-    <text x="{{.PercentX}}" y="{{.NameY}}" text-anchor="end" class="percent">
-      {{printf "%.1f" .Percent}}%
-    </text>
+      <text x="{{.PercentX}}" y="{{.NameY}}" text-anchor="end" class="percent">
+        {{printf "%.1f" .Percent}}%
+      </text>
 
-    <rect
-      x="{{.ColX}}"
-      y="{{.BarY}}"
-      width="128"
-      height="8"
-      rx="4"
-      fill="#21262d"
-    />
+      <rect
+        x="{{.ColX}}"
+        y="{{.BarY}}"
+        width="128"
+        height="8"
+        rx="4"
+        fill="#21262d"
+      />
 
-    <rect
-      x="{{.ColX}}"
-      y="{{.BarY}}"
-      width="{{printf "%.0f" .Width}}"
-      height="8"
-      rx="4"
-      fill="{{.Color}}"
-    />
+      <rect
+        x="{{.ColX}}"
+        y="{{.BarY}}"
+        width="{{printf "%.0f" .Width}}"
+        height="8"
+        rx="4"
+        fill="{{.Color}}"
+      />
 
-    <rect
-      x="{{.ColX}}"
-      y="{{.BarY}}"
-      width="{{printf "%.0f" .Width}}"
-      height="8"
-      rx="4"
-      fill="url(#shimmer)"
-    />
+      <rect
+        x="{{.ColX}}"
+        y="{{.BarY}}"
+        width="{{printf "%.0f" .Width}}"
+        height="8"
+        rx="4"
+        fill="url(#shimmer)"
+      />
+    </g>
   {{end}}
 </svg>
