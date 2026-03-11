@@ -12,6 +12,7 @@ import (
   "strconv"
   "os"
   "bytes"
+  "errors"
 )
 
 type Repo struct {
@@ -73,81 +74,46 @@ var PORT = os.Getenv("PORT")
 
 var cache = map[string][]byte{}
 
-func fetchRepos(username, token string) ([]Repo, error) {
-  url := fmt.Sprintf("https://api.github.com/users/%s/repos?per_page=100", username)
+var GITHUB_API = "https://api.github.com"
+
+func fetchRepos(username string, token string) ([]Repo, error, int) {
+  url := fmt.Sprintf("%s/users/%s/repos?per_page=99", GITHUB_API, username)
 
   req, _ := http.NewRequest("GET", url, nil)
   req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
 
   res, err := http.DefaultClient.Do(req)
+
+  if res.StatusCode == http.StatusNotFound {
+    return nil, errors.New("User not found."), http.StatusNotFound
+  }
+
   if err != nil {
-    return nil, err
+    log.Println(err)
+    return nil, errors.New("Error getting repositories."), http.StatusInternalServerError
   }
   defer res.Body.Close()
 
   var repos []Repo
   json.NewDecoder(res.Body).Decode(&repos)
-  return repos, nil
+  return repos, nil, http.StatusOK
 }
 
-func fetchLanguages(username, repo, token string) (map[string]int, error) {
-  url := fmt.Sprintf("https://api.github.com/repos/%s/%s/languages", username, repo)
+func fetchLangs(username string, repo string, token string) (map[string]int, error, int) {
+  url := fmt.Sprintf("%s/repos/%s/%s/languages", GITHUB_API, username, repo)
   req, _ := http.NewRequest("GET", url, nil)
   req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
 
   res, err := http.DefaultClient.Do(req)
   if err != nil {
-    return nil, err
+    log.Println(err)
+    return nil, errors.New("Error getting languages."), http.StatusInternalServerError
   }
   defer res.Body.Close()
 
   var langs map[string]int
   json.NewDecoder(res.Body).Decode(&langs)
-  return langs, nil
-}
-
-func topLangsHandler(username string, token string, limit int, hide map[string]bool,) (map[string]int, error) {
-  sum := make(map[string]int)
-  repos, err := fetchRepos(username, token)
-
-  if (err != nil) {
-    return sum, err
-  }
-
-  for _, r := range repos {
-    langs, err := fetchLanguages(username, r.Name, token)
-    if err != nil {
-      return sum, err
-    }
-
-    for lang, bytes := range langs {
-      lang = strings.ReplaceAll(lang, "#", "sharp")
-      lang = strings.ReplaceAll(lang, "++", "pp")
-      hideLang := strings.ToLower(lang)
-
-      if !hide[hideLang] {
-        sum[lang] += bytes
-      }
-    }
-  }
-
-  if limit > 0 && limit < len(sum) {
-    keys := make([]string, 0, len(sum))
-    for k := range sum {
-      keys = append(keys, k)
-    }
-
-    sort.Slice(keys, func(i int, j int) bool {
-      return sum[keys[i]] > sum[keys[j]]
-    })
-
-    topLangs := make(map[string]int, limit)
-    for _, k := range keys[:limit] {
-      topLangs[k] = sum[k]
-    }
-    sum = topLangs
-  }
-  return sum, nil
+  return langs, nil, http.StatusOK
 }
 
 func generateSVG(langs []LangView, query string) []byte {
@@ -212,12 +178,61 @@ func generateSVG(langs []LangView, query string) []byte {
   return svg
 }
 
+func topLangsHandler(w http.ResponseWriter, username string, token string, limit int, hide map[string]bool) map[string]int {
+  sum := make(map[string]int)
+  repos, err, status := fetchRepos(username, token)
+
+  if (err != nil) {
+    log.Println(err)
+    http.Error(w, err.Error(), status)
+    return nil
+  }
+
+  for _, r := range repos {
+    langs, err, status := fetchLangs(username, r.Name, token)
+    if err != nil {
+      log.Println(err)
+      http.Error(w, err.Error(), status)
+      return nil
+    }
+
+    for lang, bytes := range langs {
+      lang = strings.ReplaceAll(lang, "#", "sharp")
+      lang = strings.ReplaceAll(lang, "++", "pp")
+      hideLang := strings.ToLower(lang)
+
+      if !hide[hideLang] {
+        sum[lang] += bytes
+      }
+    }
+  }
+
+  if limit > 0 && limit < len(sum) {
+    keys := make([]string, 0, len(sum))
+    for k := range sum {
+      keys = append(keys, k)
+    }
+
+    sort.Slice(keys, func(i int, j int) bool {
+      return sum[keys[i]] > sum[keys[j]]
+    })
+
+    topLangs := make(map[string]int, limit)
+    for _, k := range keys[:limit] {
+      topLangs[k] = sum[k]
+    }
+    sum = topLangs
+  }
+  return sum
+}
+
 func topLangsRouteHandler(w http.ResponseWriter, r *http.Request) {
   token := os.Getenv("GITHUB_TOKEN")
 
   user := r.URL.Query().Get("user")
   if user == "" {
     http.Error(w, "Field 'user' is empty.", http.StatusBadRequest)
+    return
   }
 
   limitQuery := r.URL.Query().Get("limit")
@@ -235,18 +250,30 @@ func topLangsRouteHandler(w http.ResponseWriter, r *http.Request) {
     }
   }
 
+  url := fmt.Sprintf("%s/users/%s", GITHUB_API, user)
+
+  req, _ := http.NewRequest("GET", url, nil)
+  req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
+
+  res, _ := http.DefaultClient.Do(req)
+
+  if (res.StatusCode == 404) {
+    http.Error(w, "User not found.", http.StatusNotFound)
+    return
+  }
+
   query := r.URL.RawQuery
   if svg, ok := cache[query]; ok {
     w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
+    w.WriteHeader(http.StatusOK)
     w.Write(svg)
     return
   }
 
-  data, _ := topLangsHandler(user,
+  data := topLangsHandler(w, user,
     token,
     limit,
-    hide,
-  )
+    hide)
 
   var list []LangView
   for k, v := range data {
@@ -272,6 +299,7 @@ func topLangsRouteHandler(w http.ResponseWriter, r *http.Request) {
 
 func indexRouteHandler(w http.ResponseWriter, r *http.Request) {
   indexTemplate.Execute(w, nil)
+  w.WriteHeader(http.StatusOK)
 }
 
 func apacheLog(r *http.Request, status int) {
