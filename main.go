@@ -1,29 +1,32 @@
 package main
 
 import (
-  "net/http"
-  "fmt"
-  "log"
-  "encoding/json"
-  "sort"
-  "html/template"
-  "time"
-  "strings"
-  "strconv"
-  "os"
   "bytes"
+  "encoding/json"
   "errors"
+  "fmt"
+  "html/template"
+  "log"
+  "net/http"
+  "os"
+  "path/filepath"
+  "sort"
+  "strconv"
+  "strings"
+  "time"
 )
 
 type Repo struct {
-  Name string `json:"name"`
+  Name      string `json:"name"`
   CreatedAt string `json:"created_at"`
 }
 
 type SVGData struct {
-  Width int
-  Height int
-  Langs []LangView
+  BgColor    string
+  TitleColor string
+  Width      int
+  Height     int
+  Langs      []LangView
 }
 
 type LangView struct {
@@ -43,12 +46,10 @@ type responseWriter struct {
   status int
 }
 
-var topLangsTemplate = template.Must(
-  template.ParseFiles("templates/toplangs.tmpl"),
-)
-
-var indexTemplate = template.Must(
-  template.ParseFiles("templates/index.tmpl"),
+var (
+  templatesDir     string
+  topLangsTemplate *template.Template
+  indexTemplate    *template.Template
 )
 
 // https://raw.githubusercontent.com/github/linguist/master/lib/linguist/languages.yml
@@ -78,12 +79,10 @@ var GITHUB_API = "https://api.github.com"
 
 func fetchRepos(username string, token string) ([]Repo, error, int) {
   url := fmt.Sprintf("%s/users/%s/repos?per_page=99", GITHUB_API, username)
-
   req, _ := http.NewRequest("GET", url, nil)
   req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
 
   res, err := http.DefaultClient.Do(req)
-
   if res.StatusCode == http.StatusNotFound {
     return nil, errors.New("User not found."), http.StatusNotFound
   }
@@ -116,7 +115,11 @@ func fetchLangs(username string, repo string, token string) (map[string]int, err
   return langs, nil, http.StatusOK
 }
 
-func generateSVG(langs []LangView, query string) []byte {
+func generateSVG(externalData struct {
+  Query      string
+  BgColor    string
+  TitleColor string
+}, langs []LangView) []byte {
   const (
     colWidth  = 128
     colLeftX  = 32
@@ -130,9 +133,9 @@ func generateSVG(langs []LangView, query string) []byte {
     sum += l.Bytes
   }
 
-  colLeft  := (len(langs) + 1) / 2
+  colLeft := (len(langs) + 1) / 2
   colRight := len(langs) - colLeft
-  maxRows  := colLeft
+  maxRows := colLeft
 
   if colRight > maxRows {
     maxRows = colRight
@@ -166,15 +169,17 @@ func generateSVG(langs []LangView, query string) []byte {
   }
 
   data := SVGData{
-    Width: 432,
-    Height: colStartY + colStepY*maxRows + 16,
-    Langs: langs,
+    BgColor:    externalData.BgColor,
+    TitleColor: externalData.TitleColor,
+    Width:      432,
+    Height:     colStartY + colStepY*maxRows + 16,
+    Langs:      langs,
   }
 
   var svgBuffer bytes.Buffer
   topLangsTemplate.Execute(&svgBuffer, data)
   svg := svgBuffer.Bytes()
-  cache[query] = svg
+  cache[externalData.Query] = svg
   return svg
 }
 
@@ -182,7 +187,7 @@ func topLangsHandler(w http.ResponseWriter, username string, token string, limit
   sum := make(map[string]int)
   repos, err, status := fetchRepos(username, token)
 
-  if (err != nil) {
+  if err != nil {
     log.Println(err)
     http.Error(w, err.Error(), status)
     return nil
@@ -235,6 +240,16 @@ func topLangsRouteHandler(w http.ResponseWriter, r *http.Request) {
     return
   }
 
+  bgColor := r.URL.Query().Get("bgcolor")
+  if bgColor == "" {
+    bgColor = "111"
+  }
+
+  titleColor := r.URL.Query().Get("titlecolor")
+  if titleColor == "" {
+    titleColor = "fff"
+  }
+
   limitQuery := r.URL.Query().Get("limit")
   var limit int = 8
   if n, err := strconv.Atoi(limitQuery); err == nil {
@@ -251,13 +266,11 @@ func topLangsRouteHandler(w http.ResponseWriter, r *http.Request) {
   }
 
   url := fmt.Sprintf("%s/users/%s", GITHUB_API, user)
-
   req, _ := http.NewRequest("GET", url, nil)
   req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
 
   res, _ := http.DefaultClient.Do(req)
-
-  if (res.StatusCode == 404) {
+  if res.StatusCode == 404 {
     http.Error(w, "User not found.", http.StatusNotFound)
     return
   }
@@ -278,16 +291,24 @@ func topLangsRouteHandler(w http.ResponseWriter, r *http.Request) {
   var list []LangView
   for k, v := range data {
     list = append(list, LangView{
-      Name: k,
+      Name:  k,
       Bytes: v,
     })
   }
 
-  sort.Slice(list, func(i,j int) bool {
+  sort.Slice(list, func(i, j int) bool {
     return list[i].Bytes > list[j].Bytes
   })
 
-  svg := generateSVG(list, query)
+  svg := generateSVG(struct {
+    Query      string
+    BgColor    string
+    TitleColor string
+  }{
+    Query:      query,
+    BgColor:    fmt.Sprintf("#%s", bgColor),
+    TitleColor: fmt.Sprintf("#%s", titleColor),
+  }, list)
 
   w.Header().Set("Cache-Control", "public, max-age=43200, must-revalidate")
   w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
@@ -335,18 +356,24 @@ func (rw *responseWriter) WriteHeader(code int) {
 }
 
 func main() {
-  mux := http.NewServeMux()
-  mux.HandleFunc("/", indexRouteHandler)
-  mux.HandleFunc("/toplangs", topLangsRouteHandler)
-  logging := loggingMiddleware(mux)
+  templatesDir = os.Getenv("TEMPLATES_DIR")
+  if templatesDir == "" {
+    templatesDir = "templates"
+  }
+
+  topLangsTemplate = template.Must(template.ParseFiles(filepath.Join(templatesDir, "toplangs.tmpl")))
+  indexTemplate = template.Must(template.ParseFiles(filepath.Join(templatesDir, "index.tmpl")))
 
   if PORT == "" {
     PORT = ":8080"
   }
 
+  mux := http.NewServeMux()
+  mux.HandleFunc("/", indexRouteHandler)
+  mux.HandleFunc("/toplangs", topLangsRouteHandler)
+  logging := loggingMiddleware(mux)
   log.Printf("Server started at %s", PORT)
   if err := http.ListenAndServe(PORT, logging); err != nil {
     log.Fatal(err)
   }
 }
-
