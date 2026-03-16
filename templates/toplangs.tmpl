@@ -49,10 +49,11 @@
     fill="{{.BgColor}}"
   />
 
-  <text x="32" y="64" class="title">
+  <text x="32" y="68" class="title">
     Most Used Languages
   </text>
 
+  <g>
   {{range .Langs}}
     <g>
       <text x="{{.ColX}}" y="{{.NameY}}" class="lang">
@@ -91,4 +92,5 @@
       />
     </g>
   {{end}}
+  </g>
 </svg>
