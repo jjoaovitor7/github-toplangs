@@ -171,7 +171,7 @@ func generateSVG(externalData struct {
   data := SVGData{
     BgColor:    externalData.BgColor,
     TitleColor: externalData.TitleColor,
-    Width:      432,
+    Width:      364,
     Height:     colStartY + colStepY*maxRows + 16,
     Langs:      langs,
   }
