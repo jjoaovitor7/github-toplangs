@@ -12,15 +12,15 @@
 ## Usage
 #### Basic
 ```markdown
-![GitHub Top Langs](<URL>/toplangs?user=<user>)
+![GitHub Top Langs](https://jj-ghtoplangs.alwaysdata.net/toplangs?user=<user>)
 ```
 
 #### Bg and Title Color
 ```markdown
-![GitHub Top Langs](<URL>/toplangs?user=<user>&bgcolor=000&titlecolor=fff
+![GitHub Top Langs](https://jj-ghtoplangs.alwaysdata.net/toplangs?user=<user>&bgcolor=000&titlecolor=fff)
 ```
 
 #### Hide
 ```markdown
-![GitHub Top Langs](<URL>/toplangs?user=<user>&bgcolor=000&titlecolor=fff&hide=mdx,ejs,python)
+![GitHub Top Langs](https://jj-ghtoplangs.alwaysdata.net/toplangs?user=<user>&bgcolor=000&titlecolor=fff&hide=mdx,ejs,python)
 ```
