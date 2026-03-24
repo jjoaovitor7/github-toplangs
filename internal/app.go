@@ -12,7 +12,6 @@ import (
   "sort"
   "strconv"
   "strings"
-  "time"
 )
 
 type SVGData struct {
@@ -33,11 +32,6 @@ type LangView struct {
   Color    string
   Bytes    int
   ColX     int
-}
-
-type responseWriter struct {
-  http.ResponseWriter
-  status int
 }
 
 // https://raw.githubusercontent.com/github/linguist/master/lib/linguist/languages.yml
@@ -287,36 +281,4 @@ func TopLangsRouteHandler(w http.ResponseWriter, r *http.Request) {
 func IndexRouteHandler(w http.ResponseWriter, r *http.Request) {
   indexTemplate.Execute(w, nil)
   w.WriteHeader(http.StatusOK)
-}
-
-func apacheLog(r *http.Request, status int) {
-  ip := r.RemoteAddr
-  if strings.Contains(ip, ":") {
-    ip = strings.Split(ip, ":")[0]
-  }
-
-  // https://go.dev/src/time/format.go
-  now := time.Now().Format("02/Jan/2006:15:04:05 -0300")
-
-  log.Printf("%s - - [%s] \"%s %s %s\" %d\n",
-    ip,
-    now,
-    r.Method,
-    r.RequestURI,
-    r.Proto,
-    status,
-  )
-}
-
-func LoggingMiddleware(next http.Handler) http.Handler {
-  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    lrw := &responseWriter{w, http.StatusOK}
-    next.ServeHTTP(lrw, r)
-    apacheLog(r, lrw.status)
-  })
-}
-
-func (rw *responseWriter) WriteHeader(code int) {
-  rw.status = code
-  rw.ResponseWriter.WriteHeader(code)
 }
