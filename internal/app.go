@@ -2,10 +2,9 @@ package app
 
 import (
   "bytes"
-  "encoding/json"
-  "errors"
   "fmt"
   "html/template"
+  github "jjoaovitor7/github-toplangs/internal/provider"
   "log"
   "net/http"
   "os"
@@ -15,11 +14,6 @@ import (
   "strings"
   "time"
 )
-
-type Repo struct {
-  Name      string `json:"name"`
-  CreatedAt string `json:"created_at"`
-}
 
 type SVGData struct {
   BgColor    string
@@ -83,44 +77,6 @@ func SetTemplatesDir() {
 
   topLangsTemplate = template.Must(template.ParseFiles(filepath.Join(templatesDir, "toplangs.tmpl")))
   indexTemplate = template.Must(template.ParseFiles(filepath.Join(templatesDir, "index.tmpl")))
-}
-
-func fetchRepos(username string, token string) ([]Repo, error, int) {
-  url := fmt.Sprintf("%s/users/%s/repos?per_page=99", GITHUB_API, username)
-  req, _ := http.NewRequest("GET", url, nil)
-  req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
-
-  res, err := http.DefaultClient.Do(req)
-  if res.StatusCode == http.StatusNotFound {
-    return nil, errors.New("User not found."), http.StatusNotFound
-  }
-
-  if err != nil {
-    log.Println(err)
-    return nil, errors.New("Error getting repositories."), http.StatusInternalServerError
-  }
-  defer res.Body.Close()
-
-  var repos []Repo
-  json.NewDecoder(res.Body).Decode(&repos)
-  return repos, nil, http.StatusOK
-}
-
-func fetchLangs(username string, repo string, token string) (map[string]int, error, int) {
-  url := fmt.Sprintf("%s/repos/%s/%s/languages", GITHUB_API, username, repo)
-  req, _ := http.NewRequest("GET", url, nil)
-  req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
-
-  res, err := http.DefaultClient.Do(req)
-  if err != nil {
-    log.Println(err)
-    return nil, errors.New("Error getting languages."), http.StatusInternalServerError
-  }
-  defer res.Body.Close()
-
-  var langs map[string]int
-  json.NewDecoder(res.Body).Decode(&langs)
-  return langs, nil, http.StatusOK
 }
 
 func generateSVG(externalData struct {
@@ -192,8 +148,10 @@ func generateSVG(externalData struct {
 }
 
 func topLangsHandler(w http.ResponseWriter, username string, token string, limit int, hide map[string]bool) map[string]int {
+  githubProvider := github.NewGitHubProvider(token)
+
   sum := make(map[string]int)
-  repos, err, status := fetchRepos(username, token)
+  repos, err, status := githubProvider.FetchRepos(username)
 
   if err != nil {
     log.Println(err)
@@ -202,7 +160,7 @@ func topLangsHandler(w http.ResponseWriter, username string, token string, limit
   }
 
   for _, r := range repos {
-    langs, err, status := fetchLangs(username, r.Name, token)
+    langs, err, status := githubProvider.FetchLangs(username, r.Name)
     if err != nil {
       log.Println(err)
       http.Error(w, err.Error(), status)
