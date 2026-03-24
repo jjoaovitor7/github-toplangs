@@ -66,7 +66,7 @@ func (g GitHubProvider) FetchLangs(username, repo string) (map[string]int, error
   res, err := g.Client.Do(req)
   if err != nil {
     log.Println(err)
-    return nil, errors.New("Error getting repositories."), http.StatusInternalServerError
+    return nil, errors.New("Error getting langs."), http.StatusInternalServerError
   }
   defer res.Body.Close()
 
