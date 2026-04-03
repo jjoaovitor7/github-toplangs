@@ -1,5 +1,7 @@
 <div align="center">
-  <img src="./docs/github-toplangs.png" alt="github-toplangs" width="1024" />
+  <img src="./docs/jj-ghtoplangs.png" alt="jj-ghtoplangs" width="1024" />
+
+  <br />
 
   <p>
     Based on
@@ -12,15 +14,15 @@
 ## Usage
 #### Basic
 ```markdown
-![GitHub Top Langs](https://jj-ghtoplangs.alwaysdata.net/toplangs?user=<user>)
+![JJ GH Top Langs](https://jj-ghtoplangs.alwaysdata.net/toplangs?user=<user>)
 ```
 
 #### Bg and Title Color
 ```markdown
-![GitHub Top Langs](https://jj-ghtoplangs.alwaysdata.net/toplangs?user=<user>&bgcolor=000&titlecolor=fff)
+![JJ GH Top Langs](https://jj-ghtoplangs.alwaysdata.net/toplangs?user=<user>&bgcolor=000&titlecolor=fff)
 ```
 
 #### Hide
 ```markdown
-![GitHub Top Langs](https://jj-ghtoplangs.alwaysdata.net/toplangs?user=<user>&bgcolor=000&titlecolor=fff&hide=mdx,ejs,python)
+![JJ GH Top Langs](https://jj-ghtoplangs.alwaysdata.net/toplangs?user=<user>&bgcolor=000&titlecolor=fff&hide=mdx,ejs,python)
 ```
