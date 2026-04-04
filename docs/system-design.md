@@ -4,41 +4,41 @@ title: System Design (JJ GH Top Langs)
 ---
 
 flowchart TD
-  A([User opens GitHub README]) --> B[GitHub Camo<br/>(Image Proxy)]
+  A(["User opens GitHub README"]) --> B["GitHub Camo\n(Image Proxy)"]
 
-  B --> C[Server Host<br/>(Go API)]
+  B --> C["Server Host\n(Go API)"]
 
-  C --> D[HTTP Handler]
+  C --> D["HTTP Handler"]
 
-  D --> E{Cache In-Memory<br/>(SVG only)}
+  D --> E{"Cache In-Memory\n(SVG only)"}
 
-  E -- HIT --> F[Return Cached SVG]
+  E -- HIT --> F["Return Cached SVG"]
 
-  E -- MISS --> G[Service Layer]
+  E -- MISS --> G["Service Layer"]
 
-  G --> H[Fetch Repositories<br/>/users/:user/repos]
+  G --> H["Fetch Repositories\n/users/:user/repos"]
 
-  H --> I[Fetch Languages per Repo<br/>(sequential)]
+  H --> I["Fetch Languages per Repo\n(sequential)"]
 
-  I --> J[Aggregation<br/>(sum bytes per language)]
+  I --> J["Aggregation\n(sum bytes per language)"]
 
-  J --> K[Calculate Percentages]
+  J --> K["Calculate Percentages"]
 
-  K --> L{Response Type}
+  K --> L{"Response Type"}
 
-  L --> M[Template Engine]
+  L --> M["Template Engine"]
 
-  M --> |index.tmpl| N[Index Page]
+  M --> |index.tmpl| N["Index Page"]
 
-  L -->|JSON| O[JSON Encoder]
+  L -->|JSON| O["JSON Encoder"]
 
-  M --> |toplangs.tmpl| P[Rendered SVG]
+  M --> |toplangs.tmpl| P["Rendered SVG"]
 
-  P --> Q[Store in In-Memory Cache]
+  P --> Q["Store in In-Memory Cache"]
 
   Q --> F
 
-  F --> R([Response to Client <br />e.g. Browser])
+  F --> R(["Response to Client\n(e.g. Browser)"])
 
   N --> R
   O --> R
